@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Primary Meta Tags -->
+    <title>MeetingFlow AI - Transform Meetings Into Actionable Work</title>
+    <meta name="title" content="MeetingFlow AI - Transform Meetings Into Actionable Work" />
+    <meta name="description" content="AI-powered meeting transcription, smart task extraction, and real-time team collaboration platform. Record meetings, auto-extract tasks, and manage projects all in one place." />
+    <meta name="keywords" content="meeting transcription, AI meeting assistant, task management, team collaboration, meeting notes, project management, AI transcription, meeting summary, kanban board, client portal" />
+    <meta name="author" content="MeetingFlow AI" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="English" />
+    <meta name="revisit-after" content="7 days" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://meetingflow.ai" />
+    <meta property="og:title" content="MeetingFlow AI - Transform Meetings Into Actionable Work" />
+    <meta property="og:description" content="AI-powered meeting transcription, smart task extraction, and real-time team collaboration platform." />
+    <meta property="og:image" content="https://meetingflow.ai/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="MeetingFlow AI" />
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://meetingflow.ai" />
+    <meta property="twitter:title" content="MeetingFlow AI - Transform Meetings Into Actionable Work" />
+    <meta property="twitter:description" content="AI-powered meeting transcription, smart task extraction, and real-time team collaboration platform." />
+    <meta property="twitter:image" content="https://meetingflow.ai/og-image.png" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://meetingflow.ai" />
+    
+    <!-- Favicon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#07111D" />
+    <meta name="msapplication-TileColor" content="#DB9941" />
+    
+    <!-- Preconnect for Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://zrrlgiiwrdvunwsxfrkx.supabase.co" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="MeetingFlow AI" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MeetingFlow AI" />
+    
+    <!-- Schema.org Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "MeetingFlow AI",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "description": "AI-powered meeting transcription, smart task extraction, and real-time team collaboration platform.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.8",
+          "ratingCount": "250"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    
+    <!-- Loading Screen (shown while React loads) -->
+    <div id="initial-loader" style="
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #07111D 0%, #0a1a2e 50%, #07111D 100%);
+      font-family: 'Inter', sans-serif;
+    ">
+      <div style="text-align: center;">
+        <div style="
+          width: 60px;
+          height: 60px;
+          border-radius: 16px;
+          background: linear-gradient(135deg, #DB9941, #AE2C11);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 20px;
+          animation: pulse 2s ease-in-out infinite;
+          box-shadow: 0 0 40px rgba(219, 153, 65, 0.4);
+        ">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </div>
+        <h1 style="color: #E5E5DF; font-size: 24px; font-weight: 700; margin: 0 0 8px;">MeetingFlow AI</h1>
+        <p style="color: #5D5D5D; font-size: 14px; margin: 0;">Loading your workspace...</p>
+      </div>
+      <style>
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+      </style>
+    </div>
+
+    <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Hide loader when React mounts -->
+    <script>
+      // Hide the initial loader when React takes over
+      const observer = new MutationObserver(() => {
+        const loader = document.getElementById('initial-loader');
+        if (loader && document.getElementById('root').children.length > 0) {
+          loader.style.display = 'none';
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.getElementById('root'), { childList: true });
+    </script>
+  </body>
+</html>
