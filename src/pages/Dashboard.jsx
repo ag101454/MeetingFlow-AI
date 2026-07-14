@@ -4,41 +4,6 @@ import { Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { supabase } from '../lib/supabase';
 
-// Helper to get user details
-async function getUserDetails(userIds) {
-  if (!userIds || userIds.length === 0) return [];
-  
-  try {
-    // Try to get users from a custom function or direct query
-    const uniqueIds = [...new Set(userIds)];
-    const users = [];
-    
-    for (const id of uniqueIds) {
-      // Get user data from auth
-      const { data } = await supabase
-        .from('organization_members')
-        .select('user_id, role')
-        .eq('user_id', id)
-        .single();
-      
-      // Get profile from a profiles table or use metadata
-      const { data: { user } } = await supabase.auth.admin.getUserById(id).catch(() => ({ data: { user: null } }));
-      
-      users.push({
-        id,
-        email: user?.email || 'unknown@email.com',
-        full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Team Member',
-        role: data?.role || 'member',
-      });
-    }
-    
-    return users;
-  } catch (error) {
-    console.log('Using fallback for user details');
-    return userIds.map(id => ({ id, email: `user-${id.slice(0, 6)}@org.com`, full_name: 'Team Member' }));
-  }
-}
-
 export default function Dashboard() {
   const organization = useAuthStore((state) => state.organization);
   const user = useAuthStore((state) => state.user);
@@ -56,41 +21,83 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const { data: projects } = await supabase.from('projects').select('id, name, status').eq('organization_id', organization.id);
-      const { data: meetings } = await supabase.from('meetings').select('id, title, start_time, status').eq('organization_id', organization.id).gte('start_time', new Date().toISOString()).order('start_time', { ascending: true });
-      
+      // Load projects
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('id, name, status')
+        .eq('organization_id', organization.id);
+
+      // Load upcoming meetings
+      const { data: meetings } = await supabase
+        .from('meetings')
+        .select('id, title, start_time, status')
+        .eq('organization_id', organization.id)
+        .gte('start_time', new Date().toISOString())
+        .order('start_time', { ascending: true });
+
+      // Load tasks
       let tasksData = [];
       if (projects && projects.length > 0) {
         const projectIds = projects.map(p => p.id);
-        const { data: tasks } = await supabase.from('tasks').select('id, title, status, priority, assignee_id, due_date, project_id, created_at').in('project_id', projectIds);
+        const { data: tasks } = await supabase
+          .from('tasks')
+          .select('id, title, status, priority, assignee_id, due_date, project_id, created_at')
+          .in('project_id', projectIds);
         tasksData = tasks || [];
       }
 
-      // Get real team members with their details
-      const { data: memberships } = await supabase
-        .from('organization_members')
-        .select('user_id, role')
-        .eq('organization_id', organization.id);
+      // LOAD TEAM MEMBERS WITH REAL DATA using the database function
+      try {
+        const { data: membersData, error: membersError } = await supabase
+          .rpc('get_organization_members_with_details', { org_id: organization.id });
 
-      if (memberships && memberships.length > 0) {
-        const memberIds = memberships.map(m => m.user_id);
-        const userDetails = await getUserDetails(memberIds);
-        
-        // Map memberships with user details
-        const members = memberships.map(m => {
-          const details = userDetails.find(u => u.id === m.user_id);
-          return {
+        if (!membersError && membersData) {
+          const members = membersData.map(m => ({
             user_id: m.user_id,
             role: m.role,
-            name: details?.full_name || 'Team Member',
-            email: details?.email || 'No email',
+            name: m.full_name || m.email?.split('@')[0] || 'Team Member',
+            email: m.email || 'No email',
             isYou: m.user_id === user.id,
-          };
-        });
-        
-        setTeamMembers(members);
+          }));
+          setTeamMembers(members);
+        }
+      } catch (rpcError) {
+        console.log('RPC fallback, trying direct query...');
+        // Fallback: get memberships and try to match with user metadata
+        const { data: memberships } = await supabase
+          .from('organization_members')
+          .select('user_id, role')
+          .eq('organization_id', organization.id);
+
+        if (memberships) {
+          // Try to get user info from auth
+          const members = await Promise.all(
+            memberships.map(async (m) => {
+              try {
+                const { data: { user: userData } } = await supabase.auth.admin.getUserById(m.user_id);
+                return {
+                  user_id: m.user_id,
+                  role: m.role,
+                  name: userData?.user_metadata?.full_name || userData?.email?.split('@')[0] || 'Team Member',
+                  email: userData?.email || 'No email',
+                  isYou: m.user_id === user.id,
+                };
+              } catch {
+                return {
+                  user_id: m.user_id,
+                  role: m.role,
+                  name: m.user_id === user.id ? 'You' : 'Team Member',
+                  email: 'Loading...',
+                  isYou: m.user_id === user.id,
+                };
+              }
+            })
+          );
+          setTeamMembers(members);
+        }
       }
 
+      // Calculate stats
       const completedTasks = tasksData.filter(t => t.status === 'completed').length;
       const completionRate = tasksData.length ? Math.round((completedTasks / tasksData.length) * 100) : 0;
 
@@ -98,24 +105,41 @@ export default function Dashboard() {
         projects: projects?.length || 0,
         meetings: meetings?.length || 0,
         tasks: tasksData.length || 0,
-        members: memberships?.length || 0,
+        members: teamMembers.length || 0,
         completionRate
       });
 
-      const assignedToMe = tasksData.filter(t => t.assignee_id === user.id && t.status !== 'completed')
-        .sort((a, b) => { const order = { urgent: 0, high: 1, medium: 2, low: 3 }; return order[a.priority] - order[b.priority]; });
+      // My tasks
+      const assignedToMe = tasksData
+        .filter(t => t.assignee_id === user.id && t.status !== 'completed')
+        .sort((a, b) => {
+          const order = { urgent: 0, high: 1, medium: 2, low: 3 };
+          return order[a.priority] - order[b.priority];
+        });
       setMyTasks(assignedToMe.slice(0, 5));
 
-      const recentTasks = tasksData.filter(t => t.assignee_id || t.status === 'completed')
-        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0, 5);
+      // Recent activity
+      const recentTasks = tasksData
+        .filter(t => t.assignee_id || t.status === 'completed')
+        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+        .slice(0, 5);
       setRecentActivity(recentTasks);
+
       setUpcomingMeetings(meetings?.slice(0, 5) || []);
+
     } catch (error) {
       console.error('Error loading dashboard:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Update stats.members when teamMembers changes
+  useEffect(() => {
+    if (teamMembers.length > 0) {
+      setStats(prev => ({ ...prev, members: teamMembers.length }));
+    }
+  }, [teamMembers]);
 
   const statCards = [
     { title: 'Projects', value: stats.projects, icon: FolderKanban, color: '#DB9941', link: '/app/projects' },
@@ -143,7 +167,9 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#07111D] font-display">Dashboard</h1>
-          <p className="text-xs sm:text-sm text-[#5D5D5D] mt-0.5 font-grotesk">Welcome back, {user?.user_metadata?.full_name || user?.email || 'User'}</p>
+          <p className="text-xs sm:text-sm text-[#5D5D5D] mt-0.5 font-grotesk">
+            Welcome back, {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+          </p>
         </div>
         <div className="flex items-center space-x-2">
           <Link to="/app/meetings" className="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all hover:scale-105 font-grotesk border" style={{ borderColor: '#39444D20', color: '#39444D' }}>
@@ -220,7 +246,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Team Members - NOW SHOWING REAL DATA */}
+          {/* Team Members - REAL DATA */}
           <div className="rounded-xl sm:rounded-2xl p-4 sm:p-6 bg-white border border-[#39444D]/10">
             <h3 className="font-semibold text-[#07111D] mb-3 sm:mb-4 font-grotesk text-sm sm:text-base">Team Members</h3>
             <div className="space-y-2 sm:space-y-3">
@@ -228,7 +254,7 @@ export default function Dashboard() {
                 <div key={member.user_id} className="flex items-center space-x-2 sm:space-x-3">
                   <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold text-white flex-shrink-0"
                     style={{ backgroundColor: member.isYou ? '#DB9941' : '#39444D' }}>
-                    {member.name?.charAt(0)?.toUpperCase() || '?'}
+                    {(member.name || '?').charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs sm:text-sm font-medium text-[#07111D] font-grotesk truncate">
@@ -244,9 +270,6 @@ export default function Dashboard() {
                 <p className="text-xs text-[#5D5D5D] font-grotesk text-center py-2">No members yet</p>
               )}
             </div>
-            {teamMembers.length > 5 && (
-              <p className="text-[10px] sm:text-xs text-[#5D5D5D] font-grotesk text-center mt-2">+{teamMembers.length - 5} more members</p>
-            )}
           </div>
 
           {/* Recent Activity */}
