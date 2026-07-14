@@ -1,0 +1,16 @@
+{
+    "name": "MeetingFlow AI",
+    "short_name": "MeetingFlow",
+    "description": "AI-powered meeting transcription and task management",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#07111D",
+    "theme_color": "#DB9941",
+    "icons": [
+      {
+        "src": "/vite.svg",
+        "sizes": "32x32",
+        "type": "image/svg+xml"
+      }
+    ]
+  }
