@@ -32,3 +32,5 @@ dist-ssr
 
 # Test files with secrets
 src/test-ai.html
+
+.vercel

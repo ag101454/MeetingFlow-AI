@@ -143,3 +143,42 @@
 .animate-border-glow {
   animation: border-glow 2s ease-in-out infinite;
 }
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .mobile-full-width {
+    width: 100vw;
+    margin-left: -1rem;
+    margin-right: -1rem;
+  }
+
+  /* Prevent text overflow */
+  .break-word {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Smaller font sizes */
+  h1 { font-size: 1.5rem !important; }
+  h2 { font-size: 1.25rem !important; }
+  h3 { font-size: 1.1rem !important; }
+}
+
+/* Smooth scrolling on iOS */
+@supports (-webkit-overflow-scrolling: touch) {
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Better tap targets on mobile */
+@media (max-width: 768px) {
+  button, a, input, select, textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

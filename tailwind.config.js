@@ -7,6 +7,9 @@ export default {
     ],
     theme: {
       extend: {
+        screens: {
+          'xs': '480px',
+        },
         colors: {
           // New Color Scheme
           midnight: {
